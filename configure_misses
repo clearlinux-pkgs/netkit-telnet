@@ -1,0 +1,5 @@
+Configure miss: utilities.cc:584:45: warning: format not a string literal and no format arguments [-Wformat-security]
+
+Configure miss: utilities.cc:589:47: warning: format not a string literal and no format arguments [-Wformat-security]
+
+Configure miss: utilities.cc:594:45: warning: format not a string literal and no format arguments [-Wformat-security]

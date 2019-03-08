@@ -1,0 +1,170 @@
+Description: Support user variables in environment.
+ Include conditionally protected code, allowing the server to accept
+ variables from the client marked as user defined, i.e., ENV_USERVAR,
+ into the environment.  The code is made active by the compiler macro
+ ACCEPT_USERVAR.  This would let clients from Solaris and FreeBSD set
+ variables exported by the user.
+ [telnetd/state.c (suboption)]
+ .
+ Fix incorrect offset while diagnostically printing suboptions.
+ [telnetd/state.c (send_status)]
+ .
+ Add LANG and LC_* to the list of acceptable environment variables.
+ [telnetd/state.c (envvarok)]
+ .
+ Let the client executable announce most environment variables as user
+ defined, i.e., as ENV_USERVAR.  A new function wellknown_var() checks
+ whether a proposed variable name is known well enough to be kept as
+ ENV_VAR, thus nominally undergo more scrutiny at the server's end.
+ These addition are also conditioned by the macro ACCEPT_USERVAR:
+ [telnet/telnet.cc (env_opt_add)]
+
+Author: Mats Erik Andersson <debian@gisladisker.se>
+Bug-Debian: http://bugs.debian.org/237268
+Forwarded: no
+Last-Update: 2015-03-09
+
+--- netkit-telnet-0.17/telnetd/state.c.orig	2015-01-09 20:22:23.000000000 +0100
++++ netkit-telnet-0.17/telnetd/state.c	2015-03-07 13:53:41.241039630 +0100
+@@ -1157,7 +1157,7 @@
+     }  /* end of case TELOPT_XDISPLOC */
+ 
+     case TELOPT_ENVIRON: {
+-	register int c;
++	register int c, is_uservar = 0;
+ 	register char *cp, *varp, *valp;
+ 
+ 	if (SB_EOF())
+@@ -1168,12 +1168,17 @@
+ 	else if (c != TELQUAL_INFO)
+ 		return;
+ 
+-	while (!SB_EOF() && SB_GET() != ENV_VAR)
+-		;
++	while (!SB_EOF()) {
++	    c = SB_GET();
++	    if (c == ENV_VAR || c == ENV_USERVAR)
++		break;
++	}
+ 
+ 	if (SB_EOF())
+ 		return;
+ 
++	is_uservar = (c == ENV_USERVAR) ? 1 : 0;
++
+ 	cp = varp = (char *)subpointer;
+ 	valp = 0;
+ 
+@@ -1184,14 +1189,20 @@
+ 		cp = valp = (char *)subpointer;
+ 		break;
+ 		
++	    case ENV_USERVAR:
+ 	    case ENV_VAR:
+ 		*cp = '\0';
+-		if (envvarok(varp)) {
++		if (envvarok(varp)
++#ifdef ACCEPT_USERVAR
++		    || is_uservar
++#endif
++		   ) {
+ 		    if (valp)
+ 			(void)setenv(varp, valp, 1);
+ 		    else
+ 			unsetenv(varp);
+ 		}
++		is_uservar = (c == ENV_USERVAR) ? 1 : 0;
+ 		cp = varp = (char *)subpointer;
+ 		valp = 0;
+ 		break;
+@@ -1208,7 +1219,11 @@
+ 	    }
+ 	}
+ 	*cp = '\0';
+-	if (envvarok(varp)) {
++	if (envvarok(varp)
++#ifdef ACCEPT_USERVAR
++	    || is_uservar
++#endif
++	   ) {
+ 	    if (valp)
+ 		(void)setenv(varp, valp, 1);
+ 	    else
+@@ -1367,7 +1382,7 @@
+     writenet(statusbuf, ncp - statusbuf);
+     netflush();	/* Send it on its way */
+ 
+-    DIAG(TD_OPTIONS, {printsub('>', statusbuf, ncp - statusbuf); netflush();});
++    DIAG(TD_OPTIONS, {printsub('>', statusbuf + 2, ncp - statusbuf - 2); netflush();});
+ }
+ 
+ /* check that variable is safe to pass to login or shell */
+@@ -1399,6 +1414,8 @@ static int envvarok(char *varp) {
+     if (!strcmp(varp, "USER")) return 1;
+     if (!strcmp(varp, "LOGNAME")) return 1;
+     if (!strcmp(varp, "POSIXLY_CORRECT")) return 1;
++    if (!strcmp(varp, "LANG")) return 1;
++    if (!strncmp(varp, "LC_", 3)) return 1;
+ 
+     /* optionally syslog(LOG_INFO) here */
+     return 0;
+--- netkit-telnet-0.17/telnet/telnet.cc.orig	2015-01-09 20:22:23.000000000 +0100
++++ netkit-telnet-0.17/telnet/telnet.cc	2015-03-09 14:35:22.513396375 +0100
+@@ -1213,6 +1213,40 @@ void env_opt(unsigned char *buf, int len
+   }
+ }
+ 
++#ifdef ACCEPT_USERVAR
++namespace {
++  const struct stems {
++    const char *stem;	/* Initial part, or a full name. */
++    const int len;	/* Naught indicates a full name. */
++  } wellknown_stems[] = {
++    { "ACCT",	0 },
++    { "DISPLAY", 0 },
++    { "JOB",	0 },
++    { "LANG",	0 },
++    { "LC_",	3 },
++    { "LOGNAME", 0 },
++    { "POSIXLY_CORRECT", 0 },
++    { "PRINTER", 0 },
++    { "SSH_",	4 },
++    { "SYSTEMTYPE", 0 },
++    { "TERM",	0 },
++    { "USER",	0 },
++    { "XAUTHORITY", 0 },
++    { NULL,	0 }
++  };
++
++  int wellknown_var(const char *name) {
++    const stems *stem;
++      for (stem = wellknown_stems; stem->stem != NULL; stem++)
++	if ((stem->len ? strncmp(name, stem->stem, stem->len)
++			: strcmp(name, stem->stem)) == 0)
++	  return 1;
++
++    return 0;
++  }
++} /* Anonymous namespace */
++#endif /* ACCEPT_USERVAR */
++
+ /* OPT_REPLY_SIZE must be a multiple of 2. */
+ #define	OPT_REPLY_SIZE	256
+ unsigned char *opt_reply;
+@@ -1273,7 +1307,16 @@ void env_opt_add(const char *ep) {
+       opt_replyp = opt_reply + len - (opt_replyend - opt_replyp);
+       opt_replyend = opt_reply + len;
+     }
++
++#ifdef ACCEPT_USERVAR
++  if (wellknown_var(ep))
++    *opt_replyp++ = ENV_VAR;
++  else
++    *opt_replyp++ = ENV_USERVAR;
++#else /* !ACCEPT_USERVAR */
+   *opt_replyp++ = ENV_VAR;
++#endif
++
+   for (;;) {
+     while ((c = *ep++)!=0) {
+       switch(c) {

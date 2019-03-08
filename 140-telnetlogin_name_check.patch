@@ -1,0 +1,19 @@
+Description: Logical error in host name check.
+ Mutually exclusive conditions were juxtaposed with logical AND,
+ resulting in a test never being effective.
+Author: Ian Beckwith <ianb@debian.org>
+Comment: Incorporated from netkit-telnet-ssl.
+Forwarded: no
+Last Update: 2015-01-30
+
+--- netkit-telnet-0.17.orig/telnetlogin/telnetlogin.c
++++ netkit-telnet-0.17/telnetlogin/telnetlogin.c
+@@ -76,7 +76,7 @@
+    int i=0;
+    /* should we check length? */
+    for (i=0; hname[i]; i++) {
+-      if (hname[i]<=32 && hname[i]>126) return -1;
++      if ((hname[i]<=32) || (hname[i]>126)) return -1;
+    }
+    return 0;
+ }
