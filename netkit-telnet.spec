@@ -4,10 +4,10 @@
 #
 Name     : netkit-telnet
 Version  : 0.17
-Release  : 1
-URL      : http://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17.orig.tar.gz
-Source0  : http://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17.orig.tar.gz
-Source1  : http://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17-41.2.debian.tar.xz
+Release  : 2
+URL      : https://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17.orig.tar.gz
+Source0  : https://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17.orig.tar.gz
+Source1  : https://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17-41.2.debian.tar.xz
 Summary  : No detailed summary available
 Group    : Development/Tools
 License  : BSD-4-Clause
@@ -66,10 +66,11 @@ man components for the netkit-telnet package.
 
 %prep
 %setup -q -n netkit-telnet-0.17
-cd ..
-%setup -q -T -D -n netkit-telnet-0.17 -b 1
+cd %{_builddir}
+tar xf %{_sourcedir}/netkit-telnet_0.17-41.2.debian.tar.xz
+cd %{_builddir}/netkit-telnet-0.17
 mkdir -p debian
-cp -r %{_topdir}/BUILD/debian/* %{_topdir}/BUILD/netkit-telnet-0.17/debian
+cp -r %{_builddir}/debian/* %{_builddir}/netkit-telnet-0.17/debian
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
@@ -90,21 +91,21 @@ cp -r %{_topdir}/BUILD/debian/* %{_topdir}/BUILD/netkit-telnet-0.17/debian
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
-export LANG=C
-export SOURCE_DATE_EPOCH=1552086930
-export LDFLAGS="${LDFLAGS} -fno-lto"
-export CFLAGS="$CFLAGS -fstack-protector-strong -mzero-caller-saved-regs=used "
-export FCFLAGS="$CFLAGS -fstack-protector-strong -mzero-caller-saved-regs=used "
-export FFLAGS="$CFLAGS -fstack-protector-strong -mzero-caller-saved-regs=used "
-export CXXFLAGS="$CXXFLAGS -fstack-protector-strong -mzero-caller-saved-regs=used "
+export LANG=C.UTF-8
+export SOURCE_DATE_EPOCH=1579808475
+export GCC_IGNORE_WERROR=1
+export CFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
+export FCFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
+export FFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
+export CXXFLAGS="$CXXFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
 %configure --disable-static
-make  %{?_smp_mflags} SUB=telnet
+make  %{?_smp_mflags}  SUB=telnet
 
 %install
-export SOURCE_DATE_EPOCH=1552086930
+export SOURCE_DATE_EPOCH=1579808475
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/netkit-telnet
-cp debian/copyright %{buildroot}/usr/share/package-licenses/netkit-telnet/debian_copyright
+cp %{_builddir}/netkit-telnet-0.17/debian/copyright %{buildroot}/usr/share/package-licenses/netkit-telnet/45b5a620e2fd243b83fda098951c3a8879597d5c
 %make_install SUB=telnet
 
 %files
@@ -116,7 +117,7 @@ cp debian/copyright %{buildroot}/usr/share/package-licenses/netkit-telnet/debian
 
 %files license
 %defattr(0644,root,root,0755)
-/usr/share/package-licenses/netkit-telnet/debian_copyright
+/usr/share/package-licenses/netkit-telnet/45b5a620e2fd243b83fda098951c3a8879597d5c
 
 %files man
 %defattr(0644,root,root,0755)
