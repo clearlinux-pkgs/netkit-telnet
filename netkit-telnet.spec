@@ -4,7 +4,7 @@
 #
 Name     : netkit-telnet
 Version  : 0.17
-Release  : 2
+Release  : 3
 URL      : https://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17.orig.tar.gz
 Source0  : https://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17.orig.tar.gz
 Source1  : https://deb.debian.org/debian/pool/main/n/netkit-telnet/netkit-telnet_0.17-41.2.debian.tar.xz
@@ -94,10 +94,10 @@ export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
 export SOURCE_DATE_EPOCH=1579808475
 export GCC_IGNORE_WERROR=1
-export CFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
-export FCFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
-export FFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
-export CXXFLAGS="$CXXFLAGS -fno-lto -fstack-protector-strong -mzero-caller-saved-regs=used "
+export CFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -fzero-call-used-regs=used "
+export FCFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -fzero-call-used-regs=used "
+export FFLAGS="$CFLAGS -fno-lto -fstack-protector-strong -fzero-call-used-regs=used "
+export CXXFLAGS="$CXXFLAGS -fno-lto -fstack-protector-strong -fzero-call-used-regs=used "
 %configure --disable-static
 make  %{?_smp_mflags}  SUB=telnet
 
